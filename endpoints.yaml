@@ -1,0 +1,53 @@
+general:
+  log_level: INFO # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  output_dir: ./reports # Directory for logs and test reports
+  enable_tracing: true # Enable/disable detailed trace logs
+
+endpoints:
+  base_url: http://httpbin.org # Base URL for your XML web endpoints
+  timeout: 15 # Request timeout in seconds
+  headers:
+    Content-Type: application/xml
+    Accept: application/xml
+    # Authorization: Bearer your_token_here # Example for authentication
+
+tests:
+  - name: GetBasicXMLData
+    path: /xml
+    method: GET
+    expected_status: 200
+    validation_xpath: /slides/slide[id='slide-title'] # Checks for a 'slide' tag with id='slide-title' under 'slides'
+    validation_regex: <title>Slide 1</title> # Checks if the response content contains this regex pattern
+
+  - name: PostXMLWithDynamicParameter
+    path: /post
+    method: POST
+    body: |
+      <order>
+        <item id="SKU-{item_id}">Laptop Pro</item>
+        <quantity>{quantity}</quantity>
+        <customer>John Doe</customer>
+      </order>
+    params: # Default parameters for this test, can be overridden by command line
+      item_id: 1001
+      quantity: 1
+    expected_status: 200
+    validation_xpath: form/order/item[id='SKU-{item_id}'] # Validate the posted item back in the response
+    validation_regex: <quantity>1</quantity> # Ensure quantity is present
+
+  - name: CheckNonExistentEndpoint
+    path: /this-endpoint-does-not-exist
+    method: GET
+    expected_status: 404 # Expecting a 404 for a non-existent endpoint
+
+  - name: TestInvalidXMLResponse
+    path: /html # httpbin.org/html returns HTML, not XML, which will trigger XML parsing error
+    method: GET
+    expected_status: 200 # HTTP status might be 200, but XML validation should fail
+    validation_xpath: /html/body # This will make validation fail as it's not XML parseable as per our parser
+
+  - name: GetDelayedResponse
+    path: /delay/3 # Simulate a 3-second delay
+    method: GET
+    expected_status: 200
+    timeout: 2 # This test will specifically override the global timeout to 2 seconds and thus fail due to timeout
